@@ -10,7 +10,6 @@ include { filterByMetadataField } from '../../lib/core_functions'
 workflow PREPROCESSING {
     take:
     input_bams
-    gl_sample_count
     mhc_coords
     contigs_file_ch
 
@@ -23,10 +22,12 @@ workflow PREPROCESSING {
     SUBSET_BAMS ( input_bams, mhc_coords, contigs_file_ch )
     GENERATE_HLA_FQS ( SUBSET_BAMS.out.subset_bam )
 
+/*
     versions = versions.mix(FLAGSTAT.out.versions.first()) 
     versions = versions.mix(SUBSET_BAMS.out.versions.first())
     versions = versions.mix(GENERATE_HLA_FQS.out.versions.first()) 
-    
+*/  
+  
     // Channel containing only the wxs normal sample fqs
     normal_fqs = GENERATE_HLA_FQS.out.fqs
                .filter(filterByMetadataField("seq", "wxs"))

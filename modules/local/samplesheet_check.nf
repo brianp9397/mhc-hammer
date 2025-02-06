@@ -1,11 +1,6 @@
 process SAMPLESHEET_CHECK {
     tag "${samplesheet}"
 
-    executor 'local' 
-    memory 100.MB
-
-    container "library://tpjones15/mhchammer/mhchammer_core:latest"
-
     input:
     path samplesheet
 
@@ -15,7 +10,7 @@ process SAMPLESHEET_CHECK {
 
     script: 
     """
-    Rscript --vanilla ${baseDir}/bin/check_samplesheet.R \
+    Rscript --vanilla bin/check_samplesheet.R \
         --sample_sheet_path ${samplesheet} \
         --validated_sample_sheet_path samplesheet.valid.csv
     
@@ -37,8 +32,6 @@ process SAMPLESHEET_CHECK {
 process CHECK_HLA_TYPE_INPUT {
     tag "CHECK_HLA_TYPE_INPUT"
 
-    container "library://tpjones15/mhchammer/mhchammer_core:latest"
-
     label 'process_single'
 
     input:
@@ -53,7 +46,7 @@ process CHECK_HLA_TYPE_INPUT {
     script:
     """
     # Check if HLA fasta file exists
-    Rscript ${projectDir}/bin/check_hla_fasta.R \\
+    Rscript bin/check_hla_fasta.R \\
         --hla_fasta_path ${mhc_fasta} \\
         --hla_allele_files ${hla_allele_files} \\
         --parsed_csv ${samplesheet}

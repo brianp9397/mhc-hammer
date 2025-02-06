@@ -8,7 +8,7 @@ include { filterByMetadataField } from '../../lib/core_functions'
 workflow INPUT_CHECK {
 
     take:
-    samplesheet // file: /path/to/samplesheet.csv
+    alns_and_alleles // file: /path/to/samplesheet.csv
     mhc_fasta_ch
 
     main:
@@ -19,7 +19,7 @@ workflow INPUT_CHECK {
     versions = Channel.empty()
     
     // Run process
-    SAMPLESHEET_CHECK ( samplesheet )
+/*    SAMPLESHEET_CHECK ( samplesheet )
 
     versions = versions.mix(SAMPLESHEET_CHECK.out.versions)
 
@@ -38,28 +38,30 @@ workflow INPUT_CHECK {
                             .map { create_library_size_channels(it) }   
                             .unique()
     }
+*/
 
-    if ( !params.run_hlahd ) {
+    alleles_file = alns_and_alleles
+        .map { [it[0], it[9]] }
 
-        // get hla alleles for each sample
-        hla_alleles_to_check = SAMPLESHEET_CHECK.out.csv
-                .splitCsv ( header:true, sep:',' )
-                .map { create_hlahd_channels(it) }   
-                .unique()
+    // get hla alleles for each sample
+    hla_alleles_to_check = alleles_file
+        .splitCsv ( header:true, sep:',' )
+        .map { create_hlahd_channels(it) }   
+        .unique()
 
-        hla_allele_files = hla_alleles_to_check
-                .map { patient_id, hla_alleles -> tuple(hla_alleles) }
-                .collect()
+    hla_allele_files = hla_alleles_to_check
+        .map { patient_id, hla_alleles -> tuple(hla_alleles) }
+        .collect()
               
 
-        CHECK_HLA_TYPE_INPUT ( mhc_fasta_ch, hla_allele_files, SAMPLESHEET_CHECK.out.csv )
+    CHECK_HLA_TYPE_INPUT ( mhc_fasta_ch, hla_allele_files, SAMPLESHEET_CHECK.out.csv )
 
-        hla_alleles = CHECK_HLA_TYPE_INPUT.out.validated_samplesheet
-                .splitCsv(header: true, sep: ',')
-                .map { create_hlahd_channels(it) }
-                .unique()
+    hla_alleles = CHECK_HLA_TYPE_INPUT.out.validated_samplesheet
+        .splitCsv(header: true, sep: ',')
+        .map { create_hlahd_channels(it) }
+        .unique()
 
-        versions = versions.mix(CHECK_HLA_TYPE_INPUT.out.versions)
+    versions = versions.mix(CHECK_HLA_TYPE_INPUT.out.versions)
     }
 
     emit:
@@ -142,18 +144,7 @@ def create_bam_channels(LinkedHashMap row) {
     meta.normal_sample_name  = row.normal_sample_name
 
     def bam_array = []
-    if (!file(row.bam_path).exists()) {
-        exit 1, "ERROR: Please check input samplesheet -> BAM file does not exist!\n${row.bam_path}"
-    }
 
-    // Check bam is indexed
-    def dir_name =  file(row.bam_path).getParent()
-    def simple_name = file(row.bam_path).getBaseName()
-    def bai_files = [file("${dir_name}/${simple_name}.bai"), file("${dir_name}/${simple_name}.bam.bai")]
-
-    if (!bai_files.any { it.exists() }) {
-        exit 1, "ERROR: Please check if BAM file is indexed!\n${bai_files.join(' / ')} not found!"
-    }
 
     def bai_file = bai_files.findResult { it.exists() ? it : null }
     bam_array = [ meta, [ file(row.bam_path), file("${bai_file}") ] ]

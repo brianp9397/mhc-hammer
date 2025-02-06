@@ -5,6 +5,18 @@
 */
 nextflow.enable.dsl=2
 
+params.onco$alns_and_alleles_to_loh_hla$hla_loh_tool = 'mhc_hammer'
+params.onco$alns_and_alleles_to_loh_hla$mhc_coords = '${params.ref_dir}/assets/mhc_coords_chr6.txt'
+params.onco$alns_and_alleles_to_loh_hla$kmer_file = '${params.ref_dir}/assets/kmer_files/imgt_30mers.fa'
+params.onco$alns_and_alleles_to_loh_hla$mhc_gtf = '${params.ref_dir}/assets/mhc_references/gtf/mhc.gtf'
+params.onco$alns_and_alleles_to_loh_hla$mhc_fasta = '${params.ref_dir}/assets/mhc_references/genome/mhc_genome_strand.fasta'
+params.onco$alns_and_alleles_to_loh_hla$mhc_transcriptome_fasta = '${params.ref_dir}/assets/mhc_references/transcriptome/mhc_cds.fasta
+params.onco$alns_and_alleles_to_loh_hla$codon_table = '${params.ref_dir}/assets/codon_table.csv'
+
+
+
+/* 
+			>>>UNNECESSARY<<<
 def summary_params = NfcoreSchema.paramsSummaryMap(workflow, params)
 
 // Check input path parameters to see if they exist
@@ -13,11 +25,17 @@ for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true
 
 // Check mandatory parameters
 if (params.input) { ch_input = file(params.input) } else { exit 1, 'Input samplesheet not specified!' }
+			>>>END UNNECESSARY<<< 
+*/
+
 
 // Stage placeholder files to be used as an optional input where required
 contigs_placeholder = file("${projectDir}/assets/contigs_placeholder.txt", checkIfExists: true)
 // transcriptome_placeholder = file("${projectDir}/assets/transcriptome_placeholder.txt", checkIfExists: true)
 
+
+/* 
+			>>>UNNECESSARY<<<
 // Check if mhc_kmer file is provided if params.fish_reads = true
 if (params.kmer_file) { 
     mhc_kmer_ch = file(params.kmer_file, checkIfExists: true)
@@ -75,6 +93,9 @@ if (params.codon_table) {
      codon_table_ch = file(params.codon_table, checkIfExists: true)
     if (codon_table_ch.isEmpty()) {exit 1, "File provided with --mhc_gtf is empty: ${codon_table_ch.getName()}!"} 
 }
+			>>>END UNNECESSARY <<<
+*/
+
 
 /*
 ========================================================================================
@@ -129,6 +150,9 @@ include { check_hlahd_results; check_tumour_results } from '../lib/core_function
 
 
 workflow MHC_HAMMER {
+  take:
+    manifest
+    alns_and_alleles
 
     ch_versions = Channel.empty()
 
@@ -141,7 +165,7 @@ workflow MHC_HAMMER {
     // SUBWORKFLOW: Read in samplesheet, validate and stage input files
     //
 
-    INPUT_CHECK ( ch_input, mhc_fasta_ch )
+/*    INPUT_CHECK ( ch_input, mhc_fasta_ch )
     
     // Add software used in INPUT_CHECK
     ch_versions = ch_versions.mix(INPUT_CHECK.out.versions)
@@ -160,7 +184,7 @@ workflow MHC_HAMMER {
     purity_ploidy_ch = INPUT_CHECK.out.purity_ploidy
 
     total_tumour_count = INPUT_CHECK.out.total_tumour_sample_count
-
+*/
     //
     // SUBWORKFLOW: Run Preprocessing steps - gererates bams / fqs containing putative HLA aligned reads, runs flagstat on input bams
     // 
@@ -168,8 +192,7 @@ workflow MHC_HAMMER {
     if ( params.run_bam_subsetting ) {
 
     PREPROCESSING ( 
-        INPUT_CHECK.out.bams_ch, 
-        germline_sample_count_ch,
+        alns_and_alleles, 
         mhc_coords_ch,
         contigs_file_ch
     )

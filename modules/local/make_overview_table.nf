@@ -1,0 +1,208 @@
+process CREATE_MHC_HAMMER_TABLE {
+
+    label 'process_single'
+    label 'mhc_hammer'
+
+    input: 
+    tuple val(meta), path(output_csvs), path(inventory), path(input_csvs_file), path(hlahd_germline_samples)
+    val(min_depth)
+
+    output:
+    path "cohort_mhc_hammer_gene_table.csv", emit: cohort_mhc_hammer_gene_table
+    path "versions.yml", emit: versions
+
+    // when:
+    // only run if there are tumour samples in the cohort
+    // total_tumour_count > 0 
+
+    script:
+    """
+    Rscript /mhc-hammer/bin/make_cohort_overview_table.R \
+    --inventory_path ${inventory} \
+    --csv_tables_path ${input_csvs_file} \
+    --hlahd_germline_samples_path ${hlahd_germline_samples} \
+    --max_cn_range ${params.max_copy_number_range} \
+    --min_n_snps ${params.min_number_of_snps} \
+    --min_expected_depth ${params.min_expected_depth} \
+    --min_frac_mapping_uniquely ${params.min_frac_mapping_uniquely} \
+    --max_frac_mapping_multi_gene ${params.max_frac_mapping_multi_gene} \
+    --dna_snp_min_depth ${min_depth}
+
+    # get R version and data.table version
+    R_VERSION=\$(Rscript -e "cat(as.character(getRversion()))")
+    DT_VERSION=\$(Rscript -e "cat(paste(packageVersion('data.table'), collapse = ''))")
+    AP_VERSION=\$(Rscript -e "cat(paste(packageVersion('argparse'), collapse = ''))")
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        R: \${R_VERSION}
+        data.table: \${DT_VERSION}
+        argparse: \${AP_VERSION}
+    END_VERSIONS
+    """
+}
+
+process CREATE_MOSDEPTH_COHORT_TABLE {
+
+    label 'process_single'
+    label 'mhc_hammer'
+
+    input: 
+    tuple val(patient_id), path(output_csvs), path(inventory), path(input_csvs_file)
+
+    output:
+    path "mosdepth_*.csv", emit: overview_table
+    path "versions.yml", emit: versions
+
+    script:
+    """
+    Rscript /mhc-hammer/bin/make_cohort_mosdepth_table.R \
+    --inventory_path ${inventory} \
+    --csv_tables_path ${input_csvs_file} 
+
+    # get R version and data.table version
+    R_VERSION=\$(Rscript -e "cat(as.character(getRversion()))")
+    DT_VERSION=\$(Rscript -e "cat(paste(packageVersion('data.table'), collapse = ''))")
+    AP_VERSION=\$(Rscript -e "cat(paste(packageVersion('argparse'), collapse = ''))")
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        R: \${R_VERSION}
+        data.table: \${DT_VERSION}
+        argparse: \${AP_VERSION}
+    END_VERSIONS
+    """
+}
+
+process CREATE_LIBRARY_SIZE_TABLE {
+
+    label 'process_single'
+    label 'mhc_hammer'
+
+    input: 
+    tuple val(meta), path(output_csvs), path(inventory), path(input_csvs_file)
+
+    output:
+    path "cohort_library_size.csv", emit: library_size_table
+    path "versions.yml", emit: versions
+
+    // when:
+    // only run if there are tumour samples in the cohort
+    // total_tumour_count > 0 
+
+    script:
+    """
+    echo "running..."
+    Rscript /mhc-hammer/bin/make_cohort_library_size_table.R \
+    --inventory_path ${inventory} \
+    --csv_tables_path ${input_csvs_file} 
+
+    # get R version and data.table version
+    R_VERSION=\$(Rscript -e "cat(as.character(getRversion()))")
+    DT_VERSION=\$(Rscript -e "cat(paste(packageVersion('data.table'), collapse = ''))")
+    AP_VERSION=\$(Rscript -e "cat(paste(packageVersion('argparse'), collapse = ''))")
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        R: \${R_VERSION}
+        data.table: \${DT_VERSION}
+        argparse: \${AP_VERSION}
+    END_VERSIONS
+    """
+}
+
+process CREATE_TUMOUR_NORMAL_SPLICING_COHORT_TABLE {
+
+    label 'process_single'
+    label 'mhc_hammer'
+
+    input: 
+    tuple val(meta), path(output_csvs), path(inventory), path(input_csvs_file)
+
+    output:
+    path "tumour_normal_splicing_events.csv", emit: novel_splicing_events, optional: true
+    path "versions.yml", emit: versions
+
+    script:
+    """
+    Rscript /mhc-hammer/bin/make_cohort_tumour_normal_splicing_table.R \
+    --inventory_path ${inventory} \
+    --csv_tables_path ${input_csvs_file} 
+
+    # get R version and data.table version
+    R_VERSION=\$(Rscript -e "cat(as.character(getRversion()))")
+    DT_VERSION=\$(Rscript -e "cat(paste(packageVersion('data.table'), collapse = ''))")
+    AP_VERSION=\$(Rscript -e "cat(paste(packageVersion('argparse'), collapse = ''))")
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        R: \${R_VERSION}
+        data.table: \${DT_VERSION}
+        argparse: \${AP_VERSION}
+    END_VERSIONS
+    """
+}
+
+process CREATE_KNOWN_SPLICING_COHORT_TABLE {
+
+    label 'process_single'
+    label 'mhc_hammer'
+
+    input: 
+    tuple val(meta), path(known_splicing_tables), path(inventory), path(input_csvs_file)
+
+    output:
+    tuple val(meta), path("known_splicing_events.csv"), emit: known_splicing_events, optional: true
+    path "versions.yml", emit: versions
+
+    script:
+    """
+    Rscript /mhc-hammer/bin/make_cohort_known_alternative_splicing_table.R \
+    --inventory_path ${inventory} \
+    --csv_tables_path ${input_csvs_file} 
+
+    # get R version and data.table version
+    R_VERSION=\$(Rscript -e "cat(as.character(getRversion()))")
+    DT_VERSION=\$(Rscript -e "cat(paste(packageVersion('data.table'), collapse = ''))")
+    AP_VERSION=\$(Rscript -e "cat(paste(packageVersion('argparse'), collapse = ''))")
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        R: \${R_VERSION}
+        data.table: \${DT_VERSION}
+        argparse: \${AP_VERSION}
+    END_VERSIONS
+    """
+}
+
+process CREATE_NOVEL_SPLICING_COHORT_TABLE {
+
+    label 'process_single'
+    label 'mhc_hammer'
+
+    input: 
+    tuple val(meta), path(novel_splicing_tables), path(inventory), path(input_csvs_file) 
+
+    output:
+    path "novel_splicing_events.csv", emit: novel_splicing_events, optional: true
+    path "versions.yml", emit: versions
+
+    script:
+    """
+    Rscript /mhc-hammer/bin/make_cohort_novel_alternative_splicing_table.R \
+    --inventory_path ${inventory} \
+    --csv_tables_path ${input_csvs_file} 
+
+    # get R version and data.table version
+    R_VERSION=\$(Rscript -e "cat(as.character(getRversion()))")
+    DT_VERSION=\$(Rscript -e "cat(paste(packageVersion('data.table'), collapse = ''))")
+    AP_VERSION=\$(Rscript -e "cat(paste(packageVersion('argparse'), collapse = ''))")
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        R: \${R_VERSION}
+        data.table: \${DT_VERSION}
+        argparse: \${AP_VERSION}
+    END_VERSIONS
+    """
+}
